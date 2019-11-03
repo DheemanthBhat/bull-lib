@@ -9,105 +9,12 @@ const options = {
   }
 };
 
-module.exports = {
-  createQueue: function (qTemplate) {
-    try {
-      qTemplate.options.redis = options.redis;
-      let queue = new Queue(qTemplate.name, qTemplate.options); // Specify Redis connection using object
-      attachEvents(queue);
-      return queue;
-    } catch (error) {
-      console.log("ERROR while creating queue '" + qTemplate.name + "'.");
-      // console.log(error);
-      return undefined;
-    }
-  },
-
-  registerJob: function (queue, jobTemplate) {
-    try {
-      if (queue == undefined) {
-        throw new Error("Queue is not defined for the job '" + jobTemplate.name + "'.");
-      }
-
-      jobTemplate.queue = queue;
-
-      queue.process(jobTemplate.name, function (job, done) {
-        console.log("\nProcessing of Job " + job.data.id + " started with data: " + JSON.stringify(job.data));
-
-        job.successHandler = jobTemplate.successHandler;
-        job.failureHandler = jobTemplate.failureHandler;
-
-        jobTemplate.definition(job, done);
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  },
-
-  isQueueFull: async function (queue) {
-    try {
-      let totalJobCount = await getFullJobCounts(queue);
-      console.log("Total Jobs in queue = " + totalJobCount);
-
-      if (totalJobCount == -1) {
-        throw new Error("Failed to fetch job count in queue.");
-      }
-
-      if (totalJobCount > JOB_LIMIT) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  },
-
-  addJob: async function (jobTemplate, jobData) {
-    let self = this;
-    try {
-      if (jobTemplate.queue == undefined) {
-        throw new Error("Queue is not defined for the job '" + jobTemplate.name + "'.");
-      }
-
-      if (await self.isQueueFull(jobTemplate.queue)) {
-        throw new Error("Job not added to queue. Queue is full.");
-      }
-
-      jobTemplate.options.jobId = jobData.id;
-
-      let queue = jobTemplate.queue;
-      queue
-        .getJobs()
-        .then(jobs => {
-          let jobCheck = isDuplicate(jobs, jobData.id);
-
-          if (jobCheck.isDuplicate) {
-            jobCheck.job.update(jobData);
-            throw new Error("Duplicate job.");
-          } else {
-            return queue.add(jobTemplate.name, jobData, jobTemplate.options);
-          }
-        })
-        .then(job => {
-          console.log("Job " + job.id + " added to queue successfully.");
-        })
-        .catch(error => {
-          console.log("Failed to add job to queue.");
-          console.log(error.message);
-        });
-    } catch (error) {
-      console.log(error.message);
-    }
-  }
-}
-
 function isDuplicate(jobs, jobId) {
   let duplicateJob = jobs.filter(function (job) {
-    return job.opts.repeat.jobId == jobId;
+    return job.opts.repeat.jobId === jobId;
   }).pop();
 
-  if (duplicateJob != undefined) {
+  if (duplicateJob !== undefined) {
     return duplicateJob
   } else {
     return false
@@ -207,4 +114,97 @@ function attachEvents(queue) {
     // A job successfully removed.
     console.log("Job " + job.data.id + " is removed...");
   });
+}
+
+module.exports = {
+  createQueue: function (qTemplate) {
+    try {
+      qTemplate.options.redis = options.redis;
+      let queue = new Queue(qTemplate.name, qTemplate.options); // Specify Redis connection using object
+      attachEvents(queue);
+      return queue;
+    } catch (error) {
+      console.log("ERROR while creating queue '" + qTemplate.name + "'.");
+      // console.log(error);
+      return undefined;
+    }
+  },
+
+  registerJob: function (queue, jobTemplate) {
+    try {
+      if (queue === undefined) {
+        throw new Error("Queue is not defined for the job '" + jobTemplate.name + "'.");
+      }
+
+      jobTemplate.queue = queue;
+
+      queue.process(jobTemplate.name, function (job, done) {
+        console.log("\nProcessing of Job " + job.data.id + " started with data: " + JSON.stringify(job.data));
+
+        job.successHandler = jobTemplate.successHandler;
+        job.failureHandler = jobTemplate.failureHandler;
+
+        jobTemplate.definition(job, done);
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  isQueueFull: async function (queue) {
+    try {
+      let totalJobCount = await getFullJobCounts(queue);
+      console.log("Total Jobs in queue = " + totalJobCount);
+
+      if (totalJobCount === -1) {
+        throw new Error("Failed to fetch job count in queue.");
+      }
+
+      if (totalJobCount > JOB_LIMIT) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  addJob: async function (jobTemplate, jobData) {
+    let self = this;
+    try {
+      if (jobTemplate.queue === undefined) {
+        throw new Error("Queue is not defined for the job '" + jobTemplate.name + "'.");
+      }
+
+      if (await self.isQueueFull(jobTemplate.queue)) {
+        throw new Error("Job not added to queue. Queue is full.");
+      }
+
+      jobTemplate.options.jobId = jobData.id;
+
+      let queue = jobTemplate.queue;
+      queue
+        .getJobs()
+        .then(jobs => {
+          let jobCheck = isDuplicate(jobs, jobData.id);
+
+          if (jobCheck.isDuplicate) {
+            jobCheck.job.update(jobData);
+            throw new Error("Duplicate job.");
+          } else {
+            return queue.add(jobTemplate.name, jobData, jobTemplate.options);
+          }
+        })
+        .then(job => {
+          console.log("Job " + job.id + " added to queue successfully.");
+        })
+        .catch(error => {
+          console.log("Failed to add job to queue.");
+          console.log(error.message);
+        });
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
 }

@@ -12,7 +12,7 @@ module.exports = {
           process.stdout.write("" + (limit - i));
         }
 
-        if(i == limit) {
+        if(i === limit) {
           console.log("");
         }
       }, milliseconds);

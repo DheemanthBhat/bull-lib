@@ -19,7 +19,7 @@ module.exports = {
     job.jobTime = JOB_TIME;
 
     setTimeout(function () {
-      if (job.data.id % 2 == 0) {
+      if (job.data.id % 2 === 0) {
         done(false, { status: false });
       } else {
         done(true, { status: true });
